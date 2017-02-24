@@ -27,7 +27,6 @@ class reviewAnalyzer():
         self.df = df
         # rename column names to uppercases to avoid ambiguity that the feature words may be same as column names
         self.df.columns = map(str.upper, df.columns)
-
         self.top_features = top_features
 
     def simple_bags(self, ngrams=1):
@@ -51,8 +50,6 @@ class reviewAnalyzer():
             sorted_freq = sorted(freq.items(), key=lambda k: k[1], reverse=True)[:self.top_features]
 
             for feature, freqency in sorted_freq:
-                #print(feature, '*****', freqency, '*******', ind)
-
                 data.loc[ind, feature] = freqency
 
         data = data.fillna(0)
@@ -80,7 +77,6 @@ class reviewAnalyzer():
                 text.extend([' '.join(words).strip() for words in tempText])
 
             # Remove Stop words and stemming
-
             noStopWordsText = [words for words in text if words not in stopwords]
             stemmedText = [wnl.lemmatize(words) for words in noStopWordsText]
 
@@ -93,33 +89,32 @@ class reviewAnalyzer():
         data = data.fillna(0)
         return data
 
-    def pos_tags(self, posList=('NN', 'NNP', 'NNS', 'NNPS')):
+    def pos_tags(self, posList=('NN', 'NNP', 'NNS', 'NNPS'), ngrams=1):
         '''
         :return: Use POS approach and focus on all the noun forms (NN, NNP, NNS, NNPS)
         '''
 
         data = self.df.copy()
-
-        stopwords = nltk.corpus.stopwords.words('english')
+        print(posList)
 
         for ind in range(len(data)):
             rawText = data.loc[ind, 'REVIEW TEXT']
             # Use regular expressions to get a pure letter text and transfer all words to lower case
-            letterText = re.sub('[^a-zA-Z]', ' ', rawText).lower()
-            tokens = nltk.word_tokenize(letterText, language='english')
+            tokens = nltk.word_tokenize(rawText, language='english')
 
-            # remove stop words
-            noStopWordsText = [words for words in tokens if words not in stopwords]
+            text = []
+            for n in range(1, ngrams+1):
+                tempText = nltk.ngrams(tokens, n)
+                text.extend([' '.join(words).strip() for words in tempText])
 
             # pos tags the tokens
-            posTag = [(pos, tag) for (pos, tag) in nltk.pos_tag(tokens=noStopWordsText) if tag in posList]
-            # print(posTag)
+            posTag = [(pos, tag) for (pos, tag) in nltk.pos_tag(tokens=text) if tag in posList]
 
             freq = nltk.FreqDist(posTag)
-            sorted_freq = sorted(freq.items(), key=lambda k: k[1], reverse=True)[:]
+            sorted_freq = sorted(freq.items(), key=lambda k: k[1], reverse=True)[:self.top_features]
 
             for feature, freqency in sorted_freq:
-                print(feature, '*****', freqency)
+                #print(feature, '*****', freqency)
 
                 data.loc[ind, feature[0]] = freqency
 
@@ -131,6 +126,6 @@ if __name__ == '__main__':
     df = pd.read_csv('fashion_data.csv')
     analyzer = reviewAnalyzer(df)
     # test functions
-    simple_bags = analyzer.simple_bags(ngrams=1)
-    posTagNNP = analyzer.pos_tags(posList=['NNP'])
+    #simple_bags = analyzer.simple_bags(ngrams=1)
+    posTagNNP = analyzer.pos_tags()
     print(posTagNNP.iloc[:, 7:].sum().sort_values(ascending=False)[:30])
