@@ -25,6 +25,9 @@ class reviewAnalyzer():
         '''
 
         self.df = df
+        # rename column names to uppercases to avoid ambiguity that the feature words may be same as column names
+        self.df.columns = map(str.upper, df.columns)
+
         self.top_features = top_features
 
     def simple_bags(self, ngrams=1):
@@ -33,12 +36,9 @@ class reviewAnalyzer():
         '''
 
         data = self.df.copy()
-        # to avoid that the feature words are same as column names
-        data.columns = ['0', '1', '2', '3', '4', '5', '6']
 
         for ind in range(len(data)):
-            # last column is "reveiw text"
-            rawText = data.loc[ind, '6']
+            rawText = data.loc[ind, 'REVIEW TEXT']
             # Use regular expressions to get a pure letter text and transfer all words to lower case
             letterText = re.sub('[^a-zA-Z]', ' ', rawText).lower()
             tokens = nltk.word_tokenize(letterText, language='english')
@@ -56,7 +56,7 @@ class reviewAnalyzer():
                 data.loc[ind, feature] = freqency
 
         data = data.fillna(0)
-        return pd.concat([self.df, data.iloc[:, 7:]], axis=1)
+        return data
 
     def bag_of_words_stem_stop(self, ngrams=1):
         '''
@@ -64,15 +64,12 @@ class reviewAnalyzer():
         '''
 
         data = self.df.copy()
-        # to avoid that the feature words are same as column names
-        data.columns = ['0', '1', '2', '3', '4', '5', '6']
 
         stopwords = nltk.corpus.stopwords.words('english')
         wnl = nltk.WordNetLemmatizer()
 
         for ind in range(len(data)):
-            # last column is "reveiw text"
-            rawText = data.loc[ind, '6']
+            rawText = data.loc[ind, 'REVIEW TEXT']
             # Use regular expressions to get a pure letter text and transfer all words to lower case
             letterText = re.sub('[^a-zA-Z]', ' ', rawText).lower()
             tokens = nltk.word_tokenize(letterText, language='english')
@@ -94,7 +91,7 @@ class reviewAnalyzer():
                 data.loc[ind, feature] = freqency
 
         data = data.fillna(0)
-        return pd.concat([self.df, data.iloc[:, 7:]], axis=1)
+        return data
 
     def pos_tags(self, posList=('NN', 'NNP', 'NNS', 'NNPS')):
         '''
@@ -102,13 +99,11 @@ class reviewAnalyzer():
         '''
 
         data = self.df.copy()
-        # to avoid that the feature words are same as column names
-        data.columns = ['0', '1', '2', '3', '4', '5', '6']
+
         stopwords = nltk.corpus.stopwords.words('english')
 
         for ind in range(len(data)):
-            # last column is "reveiw text"
-            rawText = data.loc[ind, '6']
+            rawText = data.loc[ind, 'REVIEW TEXT']
             # Use regular expressions to get a pure letter text and transfer all words to lower case
             letterText = re.sub('[^a-zA-Z]', ' ', rawText).lower()
             tokens = nltk.word_tokenize(letterText, language='english')
@@ -121,15 +116,15 @@ class reviewAnalyzer():
             # print(posTag)
 
             freq = nltk.FreqDist(posTag)
-            sorted_freq = sorted(freq.items(), key=lambda k: k[1], reverse=True)[:self.top_features]
+            sorted_freq = sorted(freq.items(), key=lambda k: k[1], reverse=True)[:]
 
             for feature, freqency in sorted_freq:
-                #print(feature, '*****', freqency)
+                print(feature, '*****', freqency)
 
                 data.loc[ind, feature[0]] = freqency
 
         data = data.fillna(0)
-        return pd.concat([self.df, data.iloc[:, 7:]], axis=1)
+        return data
 
 
 if __name__ == '__main__':
@@ -137,3 +132,5 @@ if __name__ == '__main__':
     analyzer = reviewAnalyzer(df)
     # test functions
     simple_bags = analyzer.simple_bags(ngrams=1)
+    posTagNNP = analyzer.pos_tags(posList=['NNP'])
+    print(posTagNNP.iloc[:, 7:].sum().sort_values(ascending=False)[:30])
